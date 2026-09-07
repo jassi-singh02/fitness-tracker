@@ -218,3 +218,7 @@ __marimo__/
 .streamlit/secrets.toml
 
 fitness-tracker-app-plan.md
+
+__pycache__
+
+.vscode
