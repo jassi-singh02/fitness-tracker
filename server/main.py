@@ -5,6 +5,7 @@ from datetime import date
 app = FastAPI()
 
 testing = []
+next_id = 0
 
 class CreateExercise(BaseModel):
     # by defining this, this handles all the incorect data type errors - 422
@@ -29,9 +30,12 @@ async def root():
 
 ## This is to create an exercise
 @app.post("/exercise")
-def add_item(exercise: CreateExercise):
-    testing.append(exercise.name)
-    return {"exercise": testing}
+def add_exercise(exercise: CreateExercise):
+    global next_id
+    newExercise = ExerciseResponse(name = exercise.name, group = exercise.group, id = next_id)
+    testing.append(newExercise)
+    next_id += 1
+    return newExercise
 
 # This is to get back a list of all exercises
 @app.get("/exercise")
