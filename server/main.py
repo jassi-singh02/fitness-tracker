@@ -45,10 +45,12 @@ def list_exercise():
 # To get back a certain exercise from the list
 @app.get("/exercise/{exercise_id}")
 def get_exercise(exercise_id: int):
-    # error handling for wrong index - 404
-    if exercise_id < 0 or exercise_id >= len(testing):
-        raise HTTPException(status_code=404, detail = "invalid index: exercise not found")
-    return {"exercise": testing[exercise_id]}
+    # error handling for wrong index - 404, have to search through database list for the correct one
+    for exercise in testing:
+        if exercise.id == exercise_id:
+            return exercise
+    # otherwise raise a 404 error
+    raise HTTPException(status_code=404, detail = "invalid index: exercise not found")
 
 # To edit an existing exercise
 @app.patch("/exercise/{exercise_id}")
