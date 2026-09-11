@@ -29,7 +29,7 @@ async def root():
 
 
 ## This is to create an exercise
-@app.post("/exercise")
+@app.post("/exercises", response_model=ExerciseResponse)
 def add_exercise(exercise: CreateExercise):
     global next_id
     newExercise = ExerciseResponse(name = exercise.name, group = exercise.group, id = next_id)
@@ -38,31 +38,32 @@ def add_exercise(exercise: CreateExercise):
     return newExercise
 
 # This is to get back a list of all exercises
-@app.get("/exercise")
+@app.get("/exercises", response_model=ExerciseResponse)
 def list_exercise():
     return testing
 
 # To get back a certain exercise from the list
-@app.get("/exercise/{exercise_id}")
+@app.get("/exercises/{exercise_id}", response_model=ExerciseResponse)
 def get_exercise(exercise_id: int):
-    # error handling for wrong index - 404, have to search through database list for the correct one
-    for exercise in testing:
-        if exercise.id == exercise_id:
-            return exercise
+    # have to search through database list for the correct exercise
+    for exercises in testing:
+        if exercises.id == exercise_id:
+            return exercises
     # otherwise raise a 404 error
-    raise HTTPException(status_code=404, detail = "invalid index: exercise not found")
+    raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
 
-# To edit an existing exercise
-@app.patch("/exercise/{exercise_id}")
+@app.patch("/exercises/{exercise_id}", response_model=ExerciseResponse)
 def edit_exercise(exercise_id: int, exercise: CreateExercise):
-    if exercise_id < 0 or exercise_id >= len(testing):
-        raise HTTPException(status_code=404, detail = "invalid index: exercise not found")
-    # editing the exercise here and we return to the client to make it easy for us to debug later
-    testing[exercise_id] = exercise.name
-    return {"exercise": testing[exercise_id]}
+    for stored_exercise in testing:
+        if stored_exercise.id == exercise_id:
+            # editing the exercise here and we return to the client for them to save a GET trip
+            stored_exercise.name = exercise.name
+            stored_exercise.group = exercise.group
+            return stored_exercise
+    raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
 
 #  To delete an exercise
-@app.delete("/exercise/{exercise_id}")
+@app.delete("/exercises/{exercise_id}")
 def delete_exercise(exercise_id: int):
     if exercise_id < 0 or exercise_id >= len(testing):
         raise HTTPException(status_code=404, detail = "invalid index: exercise not found")
