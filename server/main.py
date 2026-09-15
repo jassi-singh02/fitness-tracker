@@ -49,7 +49,7 @@ def get_exercise(exercise_id: int):
     for exercises in testing:
         if exercises.id == exercise_id:
             return exercises
-    # otherwise raise a 404 error
+    # otherwise raise a 404 error - check in
     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
 
 @app.patch("/exercises/{exercise_id}", response_model=ExerciseResponse)
