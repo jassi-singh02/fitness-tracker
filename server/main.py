@@ -38,7 +38,7 @@ def add_exercise(exercise: CreateExercise):
     return newExercise
 
 # This is to get back a list of all exercises
-@app.get("/exercises", response_model=ExerciseResponse)
+@app.get("/exercises", response_model=list[ExerciseResponse])
 def list_exercise():
     return testing
 
@@ -63,9 +63,10 @@ def edit_exercise(exercise_id: int, exercise: CreateExercise):
     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
 
 #  To delete an exercise
-@app.delete("/exercises/{exercise_id}")
+@app.delete("/exercises/{exercise_id}", response_model=ExerciseResponse)
 def delete_exercise(exercise_id: int):
-    if exercise_id < 0 or exercise_id >= len(testing):
-        raise HTTPException(status_code=404, detail = "invalid index: exercise not found")
-    # again good to return to the client to make it easy for us to debug later
-    return {"exercise": testing.pop(exercise_id)}
+    for stored_exercise in testing:
+        if stored_exercise.id == exercise_id:
+            testing.remove(stored_exercise)
+            return stored_exercise
+    raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
