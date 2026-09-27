@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from config import settings
 from routers import exercises
 import time
 import logging
@@ -29,3 +30,8 @@ async def catch_all(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Internal Server Error"},
     )
+
+#testing env file
+@app.get("/")
+def root():
+    return {"app": settings.app_name, "env": settings.env}
