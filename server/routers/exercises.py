@@ -38,7 +38,7 @@ def list_exercise():
     return testing
 
 # To get back a certain exercise from the list
-@router.get("{exercise_id}/", response_model=ExerciseResponse)
+@router.get("/{exercise_id}", response_model=ExerciseResponse)
 def get_exercise(exercise_id: int):
     # have to search through database list for the correct exercise
     for exercises in testing:
@@ -47,7 +47,7 @@ def get_exercise(exercise_id: int):
     # otherwise raise a 404 error - check in
     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
 
-@router.patch("{exercise_id}/", response_model=ExerciseResponse)
+@router.patch("/{exercise_id}", response_model=ExerciseResponse)
 def edit_exercise(exercise_id: int, exercise: CreateExercise):
     for stored_exercise in testing:
         if stored_exercise.id == exercise_id:
@@ -58,7 +58,7 @@ def edit_exercise(exercise_id: int, exercise: CreateExercise):
     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
 
 #  To delete an exercise
-@router.delete("{exercise_id}/", response_model=ExerciseResponse)
+@router.delete("/{exercise_id}", response_model=ExerciseResponse)
 def delete_exercise(exercise_id: int):
     for stored_exercise in testing:
         if stored_exercise.id == exercise_id:
