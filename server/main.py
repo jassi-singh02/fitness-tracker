@@ -1,11 +1,18 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
+from db import create_db_and_tables
 from config import settings
 from routers import exercises
 import time
 import logging
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    yield   # server runs here
+
+app = FastAPI(lifespan=lifespan)
 # we have put all our exercise routes in exercises.py that we import from
 app.include_router(exercises.router)
 
@@ -34,4 +41,4 @@ async def catch_all(request: Request, exc: Exception):
 #testing env file
 @app.get("/")
 def root():
-    return {"app": settings.app_name, "env": settings.env}
+    return {"app": "Hello World"}
