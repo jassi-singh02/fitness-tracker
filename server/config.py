@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     env: str = "dev"
     log_level: str = "INFO"
     database_url: str
+    db_echo: bool = False
 
     model_config = SettingsConfigDict(env_file=".env")
 

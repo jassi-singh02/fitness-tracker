@@ -1,11 +1,18 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from datetime import date
+from sqlmodel import SQLModel, Field, Session, select
+from db import get_session
 
 router = APIRouter(prefix="/exercises")
 
 testing = []
 next_id = 0
+
+class Exercise(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    group: str
 
 class CreateExercise(BaseModel):
     # by defining this, this handles all the incorect data type errors - 422
