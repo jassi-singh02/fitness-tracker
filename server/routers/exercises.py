@@ -31,12 +31,20 @@ class LogExercise(BaseModel):
     performed_on: date
 
 ## This is to create an exercise
+# @router.post("", response_model=ExerciseResponse)
+# def add_exercise(exercise: CreateExercise):
+#     global next_id
+#     newExercise = ExerciseResponse(name = exercise.name, group = exercise.group, id = next_id)
+#     testing.append(newExercise)
+#     next_id += 1
+#     return newExercise
+
 @router.post("", response_model=ExerciseResponse)
-def add_exercise(exercise: CreateExercise):
-    global next_id
-    newExercise = ExerciseResponse(name = exercise.name, group = exercise.group, id = next_id)
-    testing.append(newExercise)
-    next_id += 1
+def add_exercise(exercise: CreateExercise, session: Session = Depends(get_session)):
+    newExercise = Exercise(name = exercise.name, group = exercise.group)
+    session.add(newExercise)
+    session.commit()
+    session.refresh(newExercise)
     return newExercise
 
 # This is to get back a list of all exercises
