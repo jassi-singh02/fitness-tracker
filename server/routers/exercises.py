@@ -48,9 +48,13 @@ def add_exercise(exercise: CreateExercise, session: Session = Depends(get_sessio
     return newExercise
 
 # This is to get back a list of all exercises
+# @router.get("", response_model=list[ExerciseResponse])
+# def list_exercise():
+#     return testing
+
 @router.get("", response_model=list[ExerciseResponse])
-def list_exercise():
-    return testing
+def list_exercises(session: Session = Depends(get_session)):
+    return session.exec(select(Exercise)).all()
 
 # To get back a certain exercise from the list
 @router.get("/{exercise_id}", response_model=ExerciseResponse)
