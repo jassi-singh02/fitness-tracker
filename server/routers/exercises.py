@@ -57,14 +57,14 @@ def list_exercises(session: Session = Depends(get_session)):
     return session.exec(select(Exercise)).all()
 
 # To get back a certain exercise from the list
-@router.get("/{exercise_id}", response_model=ExerciseResponse)
-def get_exercise(exercise_id: int):
-    # have to search through database list for the correct exercise
-    for exercises in testing:
-        if exercises.id == exercise_id:
-            return exercises
-    # otherwise raise a 404 error - check in
-    raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
+# @router.get("/{exercise_id}", response_model=ExerciseResponse)
+# def get_exercise(exercise_id: int):
+#     # have to search through database list for the correct exercise
+#     for exercises in testing:
+#         if exercises.id == exercise_id:
+#             return exercises
+#     # otherwise raise a 404 error - check in
+#     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
 
 @router.get("/{exercise_id}", response_model=ExerciseResponse)
 def get_exercise(exercise_id: int, session: Session = Depends(get_session)):
