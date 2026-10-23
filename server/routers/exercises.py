@@ -66,6 +66,13 @@ def get_exercise(exercise_id: int):
     # otherwise raise a 404 error - check in
     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
 
+@router.get("/{exercise_id}", response_model=ExerciseResponse)
+def get_exercise(exercise_id: int, session: Session = Depends(get_session)):
+    exercise = session.get(Exercise, exercise_id)
+    if exercise is None:
+        raise HTTPException(status_code=404, detail="Invalid ID: Exercise not found")
+    return exercise
+
 @router.patch("/{exercise_id}", response_model=ExerciseResponse)
 def edit_exercise(exercise_id: int, exercise: CreateExercise):
     for stored_exercise in testing:
