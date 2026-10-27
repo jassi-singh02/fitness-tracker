@@ -6,8 +6,8 @@ from db import get_session
 
 router = APIRouter(prefix="/exercises")
 
-testing = []
-next_id = 0
+# testing = []
+# next_id = 0
 
 class Exercise(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -73,21 +73,48 @@ def get_exercise(exercise_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Invalid ID: Exercise not found")
     return exercise
 
+# @router.patch("/{exercise_id}", response_model=ExerciseResponse)
+# def edit_exercise(exercise_id: int, exercise: CreateExercise):
+#     for stored_exercise in testing:
+#         if stored_exercise.id == exercise_id:
+#             # editing the exercise here and we return to the client for them to save a GET trip
+#             stored_exercise.name = exercise.name
+#             stored_exercise.group = exercise.group
+#             return stored_exercise
+#     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
+
 @router.patch("/{exercise_id}", response_model=ExerciseResponse)
-def edit_exercise(exercise_id: int, exercise: CreateExercise):
-    for stored_exercise in testing:
-        if stored_exercise.id == exercise_id:
-            # editing the exercise here and we return to the client for them to save a GET trip
-            stored_exercise.name = exercise.name
-            stored_exercise.group = exercise.group
-            return stored_exercise
-    raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
+def edit_exercise(exercise_id: int, exercise: CreateExercise, session: Session = Depends(get_session)):
+    stored_exercise = session.get(Exercise, exercise_id)
+    
+    if stored_exercise is None:
+        raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
+
+    stored_exercise.name = exercise.name
+    stored_exercise.group = exercise.group
+
+    session.add(stored_exercise)
+    session.commit()
+    session.refresh(stored_exercise)
+    return stored_exercise
+
 
 #  To delete an exercise
+# @router.delete("/{exercise_id}", response_model=ExerciseResponse)
+# def delete_exercise(exercise_id: int):
+#     for stored_exercise in testing:
+#         if stored_exercise.id == exercise_id:
+#             testing.remove(stored_exercise)
+#             return stored_exercise
+#     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
+
 @router.delete("/{exercise_id}", response_model=ExerciseResponse)
-def delete_exercise(exercise_id: int):
-    for stored_exercise in testing:
-        if stored_exercise.id == exercise_id:
-            testing.remove(stored_exercise)
-            return stored_exercise
-    raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
+def delete_exercise(exercise_id: int, session: Session = Depends(get_session)):
+    deleted_exercise = session.get(Exercise, exercise_id)
+
+    if deleted_exercise is None:
+        raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
+
+    session.delete(deleted_exercise)
+    session.commit()
+    return deleted_exercise
