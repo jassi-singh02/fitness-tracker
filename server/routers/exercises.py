@@ -3,26 +3,36 @@ from pydantic import BaseModel
 from datetime import date
 from sqlmodel import SQLModel, Field, Session, select
 from db import get_session
+from enum import Enum
 
 router = APIRouter(prefix="/exercises")
 
-# testing = []
-# next_id = 0
+class MuscleGroup(str, Enum):
+    chest = "Chest"
+    back = "Back"
+    shoulders = "Shoulders"
+    biceps = "Biceps"
+    triceps = "Triceps"
+    legs = "Legs"
+    core = "Core"
 
-class Exercise(SQLModel, table=True):
+class ExerciseBase(SQLModel):
+    name: str
+    muscle_group: str
+    is_bodyweight: bool
+    measured_by: str
+    archived_at: date
+
+class Exercise(ExerciseBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    name: str
-    group: str
 
-class CreateExercise(BaseModel):
-    # by defining this, this handles all the incorect data type errors - 422
-    name: str
-    group: str
+class ExerciseCreate(ExerciseBase):
+    # The model that the client sends in w/o ID
+    pass
 
-class ExerciseResponse(BaseModel):
+class ExerciseResponse(ExerciseBase):
+    # This is the model that is sent to the client on each route
     id: int
-    name: str
-    group: str
 
 class LogExercise(BaseModel):
     exercise_id: int
@@ -30,41 +40,17 @@ class LogExercise(BaseModel):
     reps: int
     performed_on: date
 
-## This is to create an exercise
-# @router.post("", response_model=ExerciseResponse)
-# def add_exercise(exercise: CreateExercise):
-#     global next_id
-#     newExercise = ExerciseResponse(name = exercise.name, group = exercise.group, id = next_id)
-#     testing.append(newExercise)
-#     next_id += 1
-#     return newExercise
-
 @router.post("", response_model=ExerciseResponse)
-def add_exercise(exercise: CreateExercise, session: Session = Depends(get_session)):
+def add_exercise(exercise: ExerciseCreate, session: Session = Depends(get_session)):
     newExercise = Exercise(name = exercise.name, group = exercise.group)
     session.add(newExercise)
     session.commit()
     session.refresh(newExercise)
     return newExercise
 
-# This is to get back a list of all exercises
-# @router.get("", response_model=list[ExerciseResponse])
-# def list_exercise():
-#     return testing
-
 @router.get("", response_model=list[ExerciseResponse])
 def list_exercises(session: Session = Depends(get_session)):
     return session.exec(select(Exercise)).all()
-
-# To get back a certain exercise from the list
-# @router.get("/{exercise_id}", response_model=ExerciseResponse)
-# def get_exercise(exercise_id: int):
-#     # have to search through database list for the correct exercise
-#     for exercises in testing:
-#         if exercises.id == exercise_id:
-#             return exercises
-#     # otherwise raise a 404 error - check in
-#     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
 
 @router.get("/{exercise_id}", response_model=ExerciseResponse)
 def get_exercise(exercise_id: int, session: Session = Depends(get_session)):
@@ -73,18 +59,8 @@ def get_exercise(exercise_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Invalid ID: Exercise not found")
     return exercise
 
-# @router.patch("/{exercise_id}", response_model=ExerciseResponse)
-# def edit_exercise(exercise_id: int, exercise: CreateExercise):
-#     for stored_exercise in testing:
-#         if stored_exercise.id == exercise_id:
-#             # editing the exercise here and we return to the client for them to save a GET trip
-#             stored_exercise.name = exercise.name
-#             stored_exercise.group = exercise.group
-#             return stored_exercise
-#     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
-
 @router.patch("/{exercise_id}", response_model=ExerciseResponse)
-def edit_exercise(exercise_id: int, exercise: CreateExercise, session: Session = Depends(get_session)):
+def edit_exercise(exercise_id: int, exercise: ExerciseCreate, session: Session = Depends(get_session)):
     stored_exercise = session.get(Exercise, exercise_id)
     
     if stored_exercise is None:
@@ -97,16 +73,6 @@ def edit_exercise(exercise_id: int, exercise: CreateExercise, session: Session =
     session.commit()
     session.refresh(stored_exercise)
     return stored_exercise
-
-
-#  To delete an exercise
-# @router.delete("/{exercise_id}", response_model=ExerciseResponse)
-# def delete_exercise(exercise_id: int):
-#     for stored_exercise in testing:
-#         if stored_exercise.id == exercise_id:
-#             testing.remove(stored_exercise)
-#             return stored_exercise
-#     raise HTTPException(status_code=404, detail = "invalid id: exercise not found")
 
 @router.delete("/{exercise_id}", response_model=ExerciseResponse)
 def delete_exercise(exercise_id: int, session: Session = Depends(get_session)):
