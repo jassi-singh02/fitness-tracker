@@ -18,10 +18,10 @@ class MuscleGroup(str, Enum):
 
 class ExerciseBase(SQLModel):
     name: str
-    muscle_group: str
+    muscle_group: MuscleGroup
     is_bodyweight: bool
     measured_by: str
-    archived_at: date
+    archived_at: date | None = None
 
 class Exercise(ExerciseBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
