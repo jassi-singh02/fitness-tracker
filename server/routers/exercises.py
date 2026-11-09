@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
 from datetime import date
 from sqlmodel import SQLModel, Field, Session, select
+from sqlalchemy import delete
 from db import get_session
 from enum import Enum
 
@@ -16,11 +16,25 @@ class MuscleGroup(str, Enum):
     legs = "Legs"
     core = "Core"
 
+class MeasuredBy(str, Enum):
+    time = "time"
+    reps = "reps"
+
+class LoadType(str, Enum):
+    external = "external"
+    bodyweight = "bodyweight"
+    assisted = "assisted"
+
+class ExerciseSecondaryMuscle(SQLModel, table=True):
+    exercise_id: int = Field(foreign_key="exercise.id", primary_key=True)
+    muscle_group: MuscleGroup = Field(primary_key=True)
+
 class ExerciseBase(SQLModel):
     name: str
     muscle_group: MuscleGroup
-    is_bodyweight: bool
-    measured_by: str
+    load_type: LoadType
+    measured_by: MeasuredBy = MeasuredBy.reps
+    # reps being default value ^^
     archived_at: date | None = None
 
 class Exercise(ExerciseBase, table=True):
@@ -28,17 +42,24 @@ class Exercise(ExerciseBase, table=True):
 
 class ExerciseCreate(ExerciseBase):
     # The model that the client sends in w/o ID
-    pass
+    secondary_muscle_group: list[MuscleGroup] = []
 
 class ExerciseResponse(ExerciseBase):
     # This is the model that is sent to the client on each route
     id: int
+    secondary_muscle_group: list[MuscleGroup]
 
-class LogExercise(BaseModel):
-    exercise_id: int
-    weight: float
-    reps: int
-    performed_on: date
+# Packages up an exercise to send back to the client, including its secondary muscles.
+# All the routes share this one function, so we only write it once (DRY).
+def to_response(exercise: Exercise, session: Session) -> ExerciseResponse:
+    # Look up the secondary muscles for this exercise
+    rows = session.exec(
+        select(ExerciseSecondaryMuscle.muscle_group)
+        .where(ExerciseSecondaryMuscle.exercise_id == exercise.id)
+    ).all()
+    groups = [MuscleGroup(g) for g in rows]
+    # Put the exercise and its muscles together
+    return ExerciseResponse(**exercise.model_dump(), secondary_muscle_group=groups)
 
 @router.post("", response_model=ExerciseResponse)
 def add_exercise(exercise: ExerciseCreate, session: Session = Depends(get_session)):
