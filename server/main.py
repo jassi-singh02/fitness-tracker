@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 from db import create_db_and_tables
 from config import settings
@@ -37,6 +38,17 @@ async def catch_all(request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Internal Server Error"},
     )
+
+# our global error handler for any 422 Unprocessable Content Errors
+# pretty unnecessary now - really depends on how the frontend is designed
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request, exc):
+    errors = []
+    for e in exc.errors():
+        field = ".".join(str(part) for part in e ["loc"][1:]) # drops the body
+        message = e["msg"].removeprefix("Value error, ")
+        errors.append({"field": field or "request", "message": message})
+    return JSONResponse(status_code=422, content={"detail": "Invalid input", "errors": errors})
 
 #testing env file
 @app.get("/")
