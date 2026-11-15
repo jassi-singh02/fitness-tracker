@@ -191,7 +191,7 @@ def edit_exercise(exercise_id: int, exercise: ExerciseUpdate, session: Session =
     new_groups = updates.pop("secondary_muscle_groups", None)
 
     # Primary and secondary muscle group check
-    final_primary = updates.get("muscle_groups", stored_exercise.muscle_group)
+    final_primary = updates.get("muscle_group", stored_exercise.muscle_group)
     final_secondaries = new_groups if new_groups is not None else get_secondaries(exercise_id, session)
 
     if final_primary in final_secondaries:
