@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import model_validator
 from datetime import date
 from sqlmodel import SQLModel, Field, Session, select, col
 from sqlalchemy import delete
@@ -77,7 +78,6 @@ class MeasuredBy(str, Enum):
 class LoadType(str, Enum):
     external = "external"
     bodyweight = "bodyweight"
-    assisted = "assisted"
 
 class ExerciseSecondaryMuscle(SQLModel, table=True):
     exercise_id: int = Field(foreign_key="exercise.id", primary_key=True)
@@ -98,6 +98,18 @@ class ExerciseCreate(ExerciseBase):
     # The model that the client sends in w/o ID
     secondary_muscle_groups: list[MuscleGroup] = []
 
+    # Pydantic runs this automatically on every POST, after the fields are filled in
+    @model_validator(mode="after")
+    def check_secondaries(self):
+        # The primary can't also be a secondary
+        if self.muscle_group in self.secondary_muscle_groups:
+            raise ValueError("The primary muscle group can't also be a secondary muscle group")
+        # A set drops repeats, so if it's shorter than the list, something was repeated
+        if len(set(self.secondary_muscle_groups)) != len(self.secondary_muscle_groups):
+            raise ValueError("secondary_muscle_groups has duplicates")
+        # Validators must return the model when everything passes
+        return self
+
 class ExerciseResponse(ExerciseBase):
     # This is the model that is sent to the client on each route
     id: int
@@ -114,14 +126,22 @@ class ExerciseUpdate(SQLModel):
 
 # Packages up an exercise to send back to the client, including its secondary muscles.
 def to_response(exercise: Exercise, session: Session) -> ExerciseResponse:
+
     # Look up the secondary muscles for this exercise
-    rows = session.exec(
-        select(ExerciseSecondaryMuscle.muscle_group)
-        .where(ExerciseSecondaryMuscle.exercise_id == exercise.id)
-    ).all()
-    groups = [MuscleGroup(g) for g in rows]
+    groups = get_secondaries(exercise.id, session)
+
     # Put the exercise and its muscles together
     return ExerciseResponse(**exercise.model_dump(), secondary_muscle_groups=groups)
+
+# To get the secondary muscle groups as a helper function
+def get_secondaries(exercise_id: int | None, session: Session) -> list[MuscleGroup]:
+
+    rows = session.exec(
+            select(ExerciseSecondaryMuscle.muscle_group)
+            .where(ExerciseSecondaryMuscle.exercise_id == exercise_id)
+        ).all()
+    
+    return [MuscleGroup(g) for g in rows]
 
 @router.post("", response_model=ExerciseResponse)
 def add_exercise(exercise: ExerciseCreate, session: Session = Depends(get_session)):
@@ -169,6 +189,16 @@ def edit_exercise(exercise_id: int, exercise: ExerciseUpdate, session: Session =
     # we only update the fields that the client sends us
     updates = exercise.model_dump(exclude_unset=True)
     new_groups = updates.pop("secondary_muscle_groups", None)
+
+    # Primary and secondary muscle group check
+    final_primary = updates.get("muscle_groups", stored_exercise.muscle_group)
+    final_secondaries = new_groups if new_groups is not None else get_secondaries(exercise_id, session)
+
+    if final_primary in final_secondaries:
+        raise HTTPException(status_code=400, detail="The primary muscle group can't also be a secondary muscle group")
+    
+    if len(set(final_secondaries)) != len(final_secondaries):
+        raise HTTPException(status_code=400, detail="secondary_muscle_groups has duplicates")
 
     for key, value in updates.items():
         setattr(stored_exercise, key, value)
