@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from db import create_db_and_tables
 from config import settings
 from routers import exercises
+from routers import workouts
 import time
 import logging
 
@@ -16,6 +17,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 # we have put all our exercise routes in exercises.py that we import from
 app.include_router(exercises.router)
+app.include_router(workouts.router)
 
 logger = logging.getLogger("uvicorn")
 
