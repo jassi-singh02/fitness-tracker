@@ -1,41 +1,5 @@
-# Tests for the /exercises routes.
-# Each test gets a fresh, empty in-memory SQLite database, so tests never touch
-# your real Postgres data and never affect each other.
-#
-# Run from the server/ folder:  pytest -v
-
-import pytest
-from fastapi.testclient import TestClient
-from sqlmodel import SQLModel, Session, create_engine, select
-from sqlmodel.pool import StaticPool
-
-from main import app
-from db import get_session
+from sqlmodel import select
 from routers.exercises import ExerciseSecondaryMuscle
-
-
-# ---------- Setup (fixtures) ----------
-
-@pytest.fixture
-def session():
-    # A throwaway database that lives in memory for one test
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-
-
-@pytest.fixture
-def client(session):
-    # Swap the real database session for the test one
-    app.dependency_overrides[get_session] = lambda: session
-    yield TestClient(app)
-    app.dependency_overrides.clear()
-
 
 BENCH = {
     "name": "Bench Press",

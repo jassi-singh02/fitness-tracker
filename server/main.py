@@ -4,8 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 from db import create_db_and_tables
 from config import settings
-from routers import exercises
-from routers import workouts
+from routers import exercises, workouts
 import time
 import logging
 
