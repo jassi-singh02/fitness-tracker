@@ -33,7 +33,8 @@ def test_patch_null_date_rejected(client):
     assert response.json()["detail"] == "Invalid Input, workout needs performed_on date"
 
     # a check to make sure that the NULL performed_on PATCH request didn't change our data
-    get_response = client.get(f"/workouts/{created['id']}") 
+    get_response = client.get(f"/workouts/{created['id']}")
+    # check if GET succeeded too for readability and confirming the request before trusting the body
     assert get_response.status_code == 200, get_response.text
     assert get_response.json()["performed_on"] == "2026-10-19", get_response.text
 

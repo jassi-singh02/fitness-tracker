@@ -17,6 +17,7 @@ app = FastAPI(lifespan=lifespan)
 # we have put all our exercise routes in exercises.py that we import from
 app.include_router(exercises.router)
 app.include_router(workouts.router)
+app.include_router(setentries.router)
 
 logger = logging.getLogger("uvicorn")
 
