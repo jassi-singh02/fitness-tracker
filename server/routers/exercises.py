@@ -160,6 +160,7 @@ def add_exercise(exercise: ExerciseCreate, session: Session = Depends(get_sessio
     session.refresh(newExercise)
     return to_response(newExercise, session)
 
+# take a look at this request to make sure it's working
 @router.get("", response_model=list[ExerciseResponse])
 def list_exercises(muscle_group: MuscleGroup | None = None, include_archived: bool = False, session: Session = Depends(get_session)):
     # query parameter to filter for muscle groups or archived exercises
@@ -179,6 +180,8 @@ def get_exercise(exercise_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Invalid ID: Exercise not found")
     return to_response(exercise, session)
 
+
+# Check again
 @router.patch("/{exercise_id}", response_model=ExerciseResponse)
 def edit_exercise(exercise_id: int, exercise: ExerciseUpdate, session: Session = Depends(get_session)):
     stored_exercise = session.get(Exercise, exercise_id)
