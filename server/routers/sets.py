@@ -94,6 +94,7 @@ def create_set(entry: SetEntryCreate, workout_id: int, session: Session = Depend
     return newEntry
 
 #@router.get("/sets/{set_id}", response_model=SetEntryResponse)
+# check in ...
 
 #@router.get("/exercises/{exercise_id}/sets", response_model=SetEntryResponse)
 
