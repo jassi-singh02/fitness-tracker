@@ -5,7 +5,7 @@ from sqlmodel import SQLModel, Field, Session, select, col
 from sqlalchemy import delete
 from db import get_session
 from enum import Enum
-from routers.exercises import Exercise, LoadType, MeasuredBy
+from routers.exercises import Exercise, LoadType, MeasuredBy, get_exercise, to_response
 from routers.workouts import Workout
 
 router = APIRouter()
@@ -17,7 +17,7 @@ class SetEntryBase(SQLModel):
     note: str | None = None
 
 class SetEntry(SetEntryBase, table=True):
-    __tablename__ = "set_entry"
+    __tablename__ = "set_entry" # type: ignore
     id: int | None = Field(default=None, primary_key=True)
     exercise_id: int = Field(foreign_key="exercise.id", ondelete="RESTRICT")
     workout_id: int = Field(foreign_key="workout.id", ondelete="CASCADE")
@@ -61,7 +61,7 @@ def check_exercise_fields(exercise: Exercise, weight: float | None, reps: int | 
     if (exercise.load_type == LoadType.external) and (weight is None):
         raise HTTPException(status_code=422, detail="Weight needs to have a value")
 
-    if (exercise.load_type == LoadType.external) and (weight <= 0):
+    if (exercise.load_type == LoadType.external) and (weight <= 0): # type: ignore
         raise HTTPException(status_code=422, detail="External load_type needs weight greater than 0")
 
 # helper function to convert bodyweight sets with no weight to 0
@@ -93,11 +93,49 @@ def create_set(entry: SetEntryCreate, workout_id: int, session: Session = Depend
     session.refresh(newEntry)
     return newEntry
 
-#@router.get("/sets/{set_id}", response_model=SetEntryResponse)
-# check in ...
+@router.get("/sets/{set_id}", response_model=SetEntryResponse)
+def get_set(set_id: int, session: Session = Depends(get_session)):
+    setEntry = session.get(SetEntry, set_id)
 
-#@router.get("/exercises/{exercise_id}/sets", response_model=SetEntryResponse)
+    if setEntry is None:
+        raise HTTPException(status_code=404, detail="Invalid ID, set not found")
 
-#@router.patch("/sets/{set_id}", response_model=SetEntryResponse)
+    return setEntry
+
+@router.get("/exercises/{exercise_id}/sets", response_model=list[SetEntryResponse])
+def get_sets(exercise_id: int, session: Session = Depends(get_session)):
+
+    # good for the client, missing exercise gives 404 and exercise with no sets is []
+    exercise = session.get(Exercise, exercise_id)
+    if exercise is None:
+        raise HTTPException(status_code=404, detail="Invalid ID, exercise not found")
+
+    # we do a SQL query to extract from our table all the sets associated with the exercise
+    query = select(SetEntry) # SELECT FROM SetEntry
+    # match SetEntry FK to user inputted PK (exercise_id) and then do a JOIN with workout
+    # so that for each row, we get the workout row whose ID matches with setEntry's FK workout_id
+    query = query.where(SetEntry.exercise_id == exercise_id).join(Workout, SetEntry.workout_id == Workout.id)
+    # with this we can order the list by the workout.performed_on field
+    query = query.order_by(col(Workout.performed_on).desc(), col(SetEntry.id).desc())
+    return session.exec(query).all()
+
+@router.patch("/sets/{set_id}", response_model=SetEntryResponse)
+def edit_entry(set_id: int, updated_entry: SetEntryUpdate, session: Session = Depends(get_session)):
+
+    stored_setEntry = session.get(SetEntry, set_id)
+
+    if stored_setEntry is None:
+        raise HTTPException(status_code=404, detail="Invalid ID, exercise not found")
+
+    updates = updated_entry.model_dump(exclude_unset=True)
+
+    for key, value in updates.items():
+        setattr(stored_storedEntry, key, value)
+
+    
+    session.add(stored_setEntry)
+    session.commit()
+    session.refresh(stored_setEntry)
+    return stored_setEntry
 
 #@router.delete("/sets/{set_id}", response_model=SetEntryResponse)
