@@ -5,7 +5,7 @@ from sqlmodel import SQLModel, Field, Session, select, col
 from sqlalchemy import delete
 from db import get_session
 from enum import Enum
-from routers.exercises import Exercise, LoadType, MeasuredBy, get_exercise, to_response
+from routers.exercises import Exercise, LoadType, MeasuredBy
 from routers.workouts import Workout
 
 router = APIRouter()
@@ -38,10 +38,6 @@ class SetEntryUpdate(SQLModel):
 
 # helper function to check if the set matches input for the exercise
 def check_exercise_fields(exercise: Exercise, weight: float | None, reps: int | None, duration_seconds: float | None):
-
-    # Check if exercised is archived, no sets added to archived exercises
-    if exercise.archived_at is not None:
-        raise HTTPException(status_code=422, detail="Exercise is archived, can't add new set")
     
     # check exercise measuredBy - elegant isn't it
     if exercise.measured_by == MeasuredBy.reps:
@@ -81,6 +77,9 @@ def create_set(entry: SetEntryCreate, workout_id: int, session: Session = Depend
 
     if setExercise is None:
         raise HTTPException(status_code=422, detail="Invalid input, exercise not found")
+
+    if setExercise.archived_at is not None:
+        raise HTTPException(status_code=422, detail="Exercise is archived, can't add new set")
 
     # set validation checks for isArchived, loadType, and measuredBy
     weight = default_bodyweight(setExercise, entry.weight)
@@ -125,17 +124,30 @@ def edit_entry(set_id: int, updated_entry: SetEntryUpdate, session: Session = De
     stored_setEntry = session.get(SetEntry, set_id)
 
     if stored_setEntry is None:
-        raise HTTPException(status_code=404, detail="Invalid ID, exercise not found")
+        raise HTTPException(status_code=404, detail="Invalid ID, entry not found")
+
+    setExercise = session.get(Exercise, stored_setEntry.exercise_id)
 
     updates = updated_entry.model_dump(exclude_unset=True)
+    check_exercise_fields(setExercise, updates.get("weight", stored_setEntry.weight), updates.get("reps", stored_setEntry.reps), updates.get("duration_seconds", stored_setEntry.duration_seconds))
 
     for key, value in updates.items():
-        setattr(stored_storedEntry, key, value)
+        setattr(stored_setEntry, key, value)
 
+    stored_setEntry.weight = default_bodyweight(setExercise, stored_setEntry.weight)
     
     session.add(stored_setEntry)
     session.commit()
     session.refresh(stored_setEntry)
     return stored_setEntry
 
-#@router.delete("/sets/{set_id}", response_model=SetEntryResponse)
+@router.delete("/sets/{set_id}", response_model=SetEntryResponse)
+def delete_entry(set_id: int, session: Session = Depends(get_session)):
+    deleted_set = session.get(SetEntry, set_id)
+
+    if deleted_set is None:
+        raise HTTPException(status_code=404, detail="Invalid ID, entry not found")
+
+    session.delete(deleted_set)
+    session.commit()
+    return deleted_set
